@@ -1,77 +1,126 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import MovieCard from '../components/MovieCard';
+import { Search, Filter } from 'lucide-react';
+import tmdbApi from '../services/tmdbApi';
+import NetflixRow from '../components/NetflixRow';
+import VideoPlayer from '../components/VideoPlayer/VideoPlayer';
 
 const SearchResults = () => {
   const [searchParams] = useSearchParams();
   const query = searchParams.get('q');
   const [movies, setMovies] = useState([]);
+  const [tvShows, setTvShows] = useState([]);
+  const [people, setPeople] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedMovie, setSelectedMovie] = useState(null);
+  const [showVideoPlayer, setShowVideoPlayer] = useState(false);
 
   useEffect(() => {
     if (query) {
-      searchMovies(query);
+      searchContent(query);
     }
   }, [query]);
 
-  const searchMovies = async (searchQuery) => {
+  const searchContent = async (searchQuery) => {
     try {
       setLoading(true);
-      const API_KEY = 'b7cd3340a794e5a2f35e3abb820b497f';
-      const response = await fetch(
-        `https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(searchQuery)}`
-      );
-      const data = await response.json();
-      setMovies(data.results?.filter(movie => movie.poster_path) || []);
+      
+      const [movieResults, tvResults, peopleResults] = await Promise.all([
+        tmdbApi.searchMovies(searchQuery),
+        tmdbApi.searchTV(searchQuery),
+        tmdbApi.searchPerson(searchQuery)
+      ]);
+      
+      setMovies(movieResults.results?.filter(movie => movie.poster_path) || []);
+      setTvShows(tvResults.results?.filter(show => show.poster_path) || []);
+      setPeople(peopleResults.results?.filter(person => person.profile_path) || []);
     } catch (error) {
-      console.error('Error searching movies:', error);
+      console.error('Error searching content:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="content-section" style={{ paddingTop: '120px' }}>
-      <div className="container">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-        >
-          <h2 className="section-title">
-            Search Results for "{query}"
-          </h2>
-          <p className="section-subtitle">
-            Found {movies.length} movies matching your search
-          </p>
-        </motion.div>
+  const handlePlayClick = async (item) => {
+    try {
+      const detailedItem = await tmdbApi.getMovieDetails(item.id);
+      setSelectedMovie(detailedItem);
+      setShowVideoPlayer(true);
+    } catch (error) {
+      console.error('Error fetching item details:', error);
+      setSelectedMovie(item);
+      setShowVideoPlayer(true);
+    }
+  };
 
-        {loading ? (
-          <div className="loading">Searching movies...</div>
-        ) : movies.length > 0 ? (
-          <motion.div 
-            className="movie-grid"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, staggerChildren: 0.1 }}
+  const handleClosePlayer = () => {
+    setShowVideoPlayer(false);
+    setSelectedMovie(null);
+  };
+
+  return (
+    <div className="netflix-search-results">
+      <VideoPlayer 
+        movie={selectedMovie}
+        onClose={handleClosePlayer}
+        isVisible={showVideoPlayer}
+      />
+
+      {/* Search Header */}
+      <div className="netflix-search-header">
+        <div className="netflix-search-container">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
           >
-            {movies.map((movie) => (
-              <motion.div
-                key={movie.id}
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
-              >
-                <MovieCard movie={movie} />
-              </motion.div>
-            ))}
+            <div className="netflix-search-title-section">
+              <Search size={32} className="search-icon" />
+              <h1>Search Results for "{query}"</h1>
+            </div>
+            <p className="netflix-search-subtitle">
+              Found {movies.length + tvShows.length + people.length} results
+            </p>
           </motion.div>
-        ) : (
-          <div className="error">
-            <h3>No Movies Found</h3>
-            <p>Try searching with different keywords</p>
+        </div>
+      </div>
+
+      {/* Search Results Content */}
+      <div className="netflix-search-content">
+        {loading ? (
+          <div className="netflix-loading">
+            <div className="netflix-spinner"></div>
           </div>
+        ) : (
+          <>
+            {movies.length > 0 && (
+              <NetflixRow
+                title={`Movies (${movies.length})`}
+                content={movies}
+                onPlayClick={handlePlayClick}
+              />
+            )}
+            
+            {tvShows.length > 0 && (
+              <NetflixRow
+                title={`TV Shows (${tvShows.length})`}
+                content={tvShows}
+                onPlayClick={handlePlayClick}
+                isTV={true}
+              />
+            )}
+
+            {movies.length === 0 && tvShows.length === 0 && people.length === 0 && (
+              <div className="netflix-no-results">
+                <div className="no-results-content">
+                  <Search size={64} className="no-results-icon" />
+                  <h2>No results found for "{query}"</h2>
+                  <p>Try different keywords or check your spelling</p>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

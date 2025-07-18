@@ -3,23 +3,25 @@ import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Play, 
-  Eye, 
-  Download, 
+  Plus,
+  ThumbsUp,
+  ThumbsDown,
+  Share2,
+  Download,
   Star, 
   Calendar, 
   Clock, 
   Globe,
   Users,
-  DollarSign,
   Award,
-  Heart,
-  Share2,
-  Bookmark,
-  ChevronRight
+  ChevronDown,
+  X,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import tmdbApi from '../../services/tmdbApi';
-import VideoModal from '../../components/VideoModal';
-import ContentGrid from '../../components/ContentGrid';
+import NetflixRow from '../../components/NetflixRow';
+import VideoPlayer from '../../components/VideoPlayer/VideoPlayer';
 import './MovieDetail.css';
 
 const MovieDetail = () => {
@@ -31,13 +33,15 @@ const MovieDetail = () => {
   const [reviews, setReviews] = useState([]);
   const [similarMovies, setSimilarMovies] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
-  const [translations, setTranslations] = useState([]);
   const [selectedLanguage, setSelectedLanguage] = useState('en');
   const [showTrailer, setShowTrailer] = useState(false);
+  const [showVideoPlayer, setShowVideoPlayer] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isInWatchlist, setIsInWatchlist] = useState(false);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [userRating, setUserRating] = useState(null);
+  const [showMoreInfo, setShowMoreInfo] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
 
   const languages = [
     { code: 'en', name: 'English', flag: '🇺🇸' },
@@ -45,14 +49,6 @@ const MovieDetail = () => {
     { code: 'it', name: 'Italian', flag: '🇮🇹' },
     { code: 'fr', name: 'French', flag: '🇫🇷' },
     { code: 'de', name: 'German', flag: '🇩🇪' }
-  ];
-
-  const downloadQualities = [
-    { quality: 'SD', size: '1.2 GB', resolution: '480p' },
-    { quality: 'HD', size: '2.8 GB', resolution: '720p' },
-    { quality: 'Full HD', size: '4.5 GB', resolution: '1080p' },
-    { quality: '4K', size: '8.2 GB', resolution: '2160p' },
-    { quality: '8K', size: '15.6 GB', resolution: '4320p' }
   ];
 
   useEffect(() => {
@@ -75,9 +71,8 @@ const MovieDetail = () => {
       ).slice(0, 10) || []);
       setVideos(data.videos?.results || []);
       setReviews(data.reviews?.results?.slice(0, 5) || []);
-      setSimilarMovies(data.similar?.results?.slice(0, 20) || []);
-      setRecommendations(data.recommendations?.results?.slice(0, 20) || []);
-      setTranslations(data.translations?.translations || []);
+      setSimilarMovies(data.similar?.results || []);
+      setRecommendations(data.recommendations?.results || []);
       
     } catch (error) {
       console.error('Error fetching movie details:', error);
@@ -85,6 +80,14 @@ const MovieDetail = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePlayClick = () => {
+    setShowVideoPlayer(true);
+  };
+
+  const handleClosePlayer = () => {
+    setShowVideoPlayer(false);
   };
 
   const handleDownload = (quality) => {
@@ -110,7 +113,10 @@ const MovieDetail = () => {
 
   const toggleWatchlist = () => {
     setIsInWatchlist(!isInWatchlist);
-    // In a real app, this would sync with backend
+  };
+
+  const handleRating = (rating) => {
+    setUserRating(rating);
   };
 
   const getTrailerKey = () => {
@@ -124,40 +130,26 @@ const MovieDetail = () => {
     return crew.find(person => person.job === 'Director')?.name || 'N/A';
   };
 
-  const getTranslatedOverview = () => {
-    const translation = translations.find(t => t.iso_639_1 === selectedLanguage);
-    return translation?.data?.overview || movie.overview;
-  };
-
-  const formatBudget = (amount) => {
-    return tmdbApi.formatCurrency(amount);
-  };
-
-  const formatRevenue = (amount) => {
-    return tmdbApi.formatCurrency(amount);
+  const getMatchPercentage = () => {
+    return Math.round(movie.vote_average * 10);
   };
 
   if (loading) {
     return (
-      <div className="movie-detail-loading">
-        <div className="loading-container">
-          <div className="loading-spinner" />
-          <span>Loading movie details...</span>
-        </div>
+      <div className="netflix-loading">
+        <div className="netflix-spinner"></div>
       </div>
     );
   }
 
   if (error || !movie) {
     return (
-      <div className="movie-detail-error">
-        <div className="error-container">
-          <h2>Oops! Something went wrong</h2>
-          <p>{error || 'Movie not found'}</p>
-          <Link to="/" className="btn-primary">
-            Go Home
-          </Link>
-        </div>
+      <div className="netflix-error">
+        <h2>Oops! Something went wrong</h2>
+        <p>{error || 'Movie not found'}</p>
+        <Link to="/" className="netflix-btn netflix-btn-primary">
+          Go Home
+        </Link>
       </div>
     );
   }
@@ -169,379 +161,240 @@ const MovieDetail = () => {
   const runtime = tmdbApi.formatRuntime(movie.runtime);
 
   return (
-    <div className="movie-detail">
-      {/* Hero Section */}
-      <section className="movie-hero">
+    <div className="netflix-movie-detail">
+      {/* Video Player */}
+      <VideoPlayer 
+        movie={movie}
+        onClose={handleClosePlayer}
+        isVisible={showVideoPlayer}
+      />
+
+      {/* Netflix Hero */}
+      <div className="netflix-movie-hero">
         {backdropUrl && (
-          <div className="hero-background">
+          <div className="netflix-hero-background">
             <img src={backdropUrl} alt={movie.title} />
-            <div className="hero-gradient" />
+            <div className="netflix-hero-gradient" />
           </div>
         )}
         
-        <div className="hero-content">
-          <div className="container">
-            <motion.div 
-              className="movie-header"
-              initial={{ opacity: 0, y: 50 }}
+        <div className="netflix-hero-content">
+          <div className="netflix-hero-info">
+            <motion.h1 
+              className="netflix-hero-title"
+              initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8 }}
             >
-              <div className="movie-poster-container">
-                <div className="movie-poster-sticky">
-                  <img src={posterUrl} alt={movie.title} />
-                  <div className="poster-overlay">
-                    <button 
-                      className="poster-play-btn"
-                      onClick={() => setShowTrailer(true)}
-                    >
-                      <Play size={24} fill="currentColor" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="movie-info">
-                <div className="movie-title-section">
-                  <h1 className="movie-title">{movie.title}</h1>
-                  {movie.tagline && (
-                    <p className="movie-tagline">"{movie.tagline}"</p>
-                  )}
-                </div>
-
-                <div className="movie-meta-grid">
-                  <div className="meta-item">
-                    <Star size={16} fill="#ffd700" color="#ffd700" />
-                    <span className="meta-value rating-value">
-                      {rating.text} ({movie.vote_count?.toLocaleString()} votes)
-                    </span>
-                  </div>
-                  <div className="meta-item">
-                    <Calendar size={16} />
-                    <span className="meta-value">{releaseYear}</span>
-                  </div>
-                  <div className="meta-item">
-                    <Clock size={16} />
-                    <span className="meta-value">{runtime}</span>
-                  </div>
-                  <div className="meta-item">
-                    <Globe size={16} />
-                    <span className="meta-value">{movie.original_language?.toUpperCase()}</span>
-                  </div>
-                </div>
-
-                {movie.genres && movie.genres.length > 0 && (
-                  <div className="genre-tags">
-                    {movie.genres.map((genre) => (
-                      <Link
-                        key={genre.id}
-                        to={`/genre/${genre.id}?name=${encodeURIComponent(genre.name)}`}
-                        className="genre-tag"
-                      >
-                        {genre.name}
-                      </Link>
-                    ))}
-                  </div>
-                )}
-
-                <div className="movie-stats">
-                  <div className="stat-item">
-                    <DollarSign size={16} />
-                    <div className="stat-content">
-                      <span className="stat-label">Budget</span>
-                      <span className="stat-value">{formatBudget(movie.budget)}</span>
-                    </div>
-                  </div>
-                  <div className="stat-item">
-                    <Award size={16} />
-                    <div className="stat-content">
-                      <span className="stat-label">Revenue</span>
-                      <span className="stat-value">{formatRevenue(movie.revenue)}</span>
-                    </div>
-                  </div>
-                  <div className="stat-item">
-                    <Users size={16} />
-                    <div className="stat-content">
-                      <span className="stat-label">Director</span>
-                      <span className="stat-value">{getDirector()}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="action-buttons">
-                  <Link to={`/watch/${movie.id}`} className="btn-primary btn-watch">
-                    <Play size={20} />
-                    Watch Now
-                  </Link>
-                  <button 
-                    className="btn-secondary"
-                    onClick={() => setShowTrailer(true)}
-                  >
-                    <Eye size={20} />
-                    Watch Trailer
-                  </button>
-                  <button 
-                    className={`btn-icon ${isInWatchlist ? 'active' : ''}`}
-                    onClick={toggleWatchlist}
-                    title={isInWatchlist ? 'Remove from watchlist' : 'Add to watchlist'}
-                  >
-                    <Bookmark size={20} fill={isInWatchlist ? 'currentColor' : 'none'} />
-                  </button>
-                  <button 
-                    className="btn-icon"
-                    onClick={handleShare}
-                    title="Share"
-                  >
-                    <Share2 size={20} />
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* Content Tabs */}
-      <section className="movie-content">
-        <div className="container">
-          <div className="content-tabs">
-            <button 
-              className={`tab-btn ${activeTab === 'overview' ? 'active' : ''}`}
-              onClick={() => setActiveTab('overview')}
-            >
-              Overview
-            </button>
-            <button 
-              className={`tab-btn ${activeTab === 'cast' ? 'active' : ''}`}
-              onClick={() => setActiveTab('cast')}
-            >
-              Cast & Crew
-            </button>
-            <button 
-              className={`tab-btn ${activeTab === 'reviews' ? 'active' : ''}`}
-              onClick={() => setActiveTab('reviews')}
-            >
-              Reviews ({reviews.length})
-            </button>
-            <button 
-              className={`tab-btn ${activeTab === 'download' ? 'active' : ''}`}
-              onClick={() => setActiveTab('download')}
-            >
-              Download
-            </button>
-          </div>
-
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              className="tab-content"
+              {movie.title}
+            </motion.h1>
+            
+            <motion.div 
+              className="netflix-hero-meta"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
             >
-              {activeTab === 'overview' && (
-                <div className="overview-content">
-                  <div className="language-selector">
-                    <h3>Select Language:</h3>
-                    <div className="language-flags">
-                      {languages.map((lang) => (
-                        <button
-                          key={lang.code}
-                          className={`flag-btn ${selectedLanguage === lang.code ? 'active' : ''}`}
-                          onClick={() => setSelectedLanguage(lang.code)}
-                          title={lang.name}
-                        >
-                          <span className="flag-emoji">{lang.flag}</span>
-                          <span className="flag-name">{lang.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="movie-description">
-                    <h3>Plot Summary</h3>
-                    <p>{getTranslatedOverview() || 'No description available for this movie.'}</p>
-                  </div>
-
-                  {movie.production_companies && movie.production_companies.length > 0 && (
-                    <div className="production-info">
-                      <h3>Production Companies</h3>
-                      <div className="production-companies">
-                        {movie.production_companies.slice(0, 4).map((company) => (
-                          <div key={company.id} className="company-item">
-                            {company.logo_path && (
-                              <img 
-                                src={tmdbApi.getImageURL(company.logo_path, 'w200')}
-                                alt={company.name}
-                                className="company-logo"
-                              />
-                            )}
-                            <span className="company-name">{company.name}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {activeTab === 'cast' && (
-                <div className="cast-content">
-                  <div className="cast-section">
-                    <h3>Main Cast</h3>
-                    <div className="cast-grid">
-                      {cast.map((person) => (
-                        <div key={person.id} className="cast-card">
-                          <div className="cast-photo">
-                            <img 
-                              src={tmdbApi.getImageURL(person.profile_path, 'w200') || 'https://via.placeholder.com/200x300/333/fff?text=No+Image'}
-                              alt={person.name}
-                              loading="lazy"
-                            />
-                          </div>
-                          <div className="cast-info">
-                            <h4 className="cast-name">{person.name}</h4>
-                            <p className="cast-character">{person.character}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="crew-section">
-                    <h3>Key Crew</h3>
-                    <div className="crew-list">
-                      {crew.map((person) => (
-                        <div key={`${person.id}-${person.job}`} className="crew-item">
-                          <span className="crew-name">{person.name}</span>
-                          <span className="crew-job">{person.job}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 'reviews' && (
-                <div className="reviews-content">
-                  {reviews.length > 0 ? (
-                    <div className="reviews-list">
-                      {reviews.map((review) => (
-                        <div key={review.id} className="review-card">
-                          <div className="review-header">
-                            <div className="reviewer-info">
-                              <h4 className="reviewer-name">{review.author}</h4>
-                              {review.author_details?.rating && (
-                                <div className="review-rating">
-                                  <Star size={14} fill="#ffd700" color="#ffd700" />
-                                  <span>{review.author_details.rating}/10</span>
-                                </div>
-                              )}
-                            </div>
-                            <span className="review-date">
-                              {tmdbApi.formatDate(review.created_at, 'short')}
-                            </span>
-                          </div>
-                          <div className="review-content">
-                            <p>
-                              {review.content.length > 500 
-                                ? `${review.content.substring(0, 500)}...`
-                                : review.content
-                              }
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="no-reviews">
-                      <p>No reviews available for this movie yet.</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {activeTab === 'download' && (
-                <div className="download-content">
-                  <div className="download-header">
-                    <h3>Download Options</h3>
-                    <p>Choose your preferred quality and language</p>
-                  </div>
-
-                  <div className="download-language-selector">
-                    <h4>Language: {languages.find(l => l.code === selectedLanguage)?.name}</h4>
-                    <div className="language-flags">
-                      {languages.map((lang) => (
-                        <button
-                          key={lang.code}
-                          className={`flag-btn ${selectedLanguage === lang.code ? 'active' : ''}`}
-                          onClick={() => setSelectedLanguage(lang.code)}
-                        >
-                          {lang.flag}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="download-grid">
-                    {downloadQualities.map((item, index) => (
-                      <div key={index} className="download-card">
-                        <div className="download-info">
-                          <h4 className="download-quality">{item.quality} Quality</h4>
-                          <p className="download-size">{item.size}</p>
-                          <p className="download-lang">
-                            {languages.find(l => l.code === selectedLanguage)?.name} Audio
-                          </p>
-                        </div>
-                        <button
-                          className="download-btn"
-                          onClick={() => handleDownload(item.quality)}
-                        >
-                          <Download size={16} />
-                          Download
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="download-notice">
-                    <p>
-                      <strong>Note:</strong> Complete a quick offer to unlock download links. 
-                      This helps us keep the service free for everyone.
-                    </p>
-                  </div>
-                </div>
-              )}
+              <span className="netflix-match">{getMatchPercentage()}% Match</span>
+              <span className="netflix-year">{releaseYear}</span>
+              <span className="netflix-rating">HD</span>
+              <span className="netflix-runtime">{runtime}</span>
             </motion.div>
-          </AnimatePresence>
+            
+            <motion.p 
+              className="netflix-hero-overview"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.3 }}
+            >
+              {movie.overview?.length > 300 ? `${movie.overview.substring(0, 300)}...` : movie.overview}
+            </motion.p>
+
+            {movie.genres && (
+              <motion.div 
+                className="netflix-genres"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.4 }}
+              >
+                {movie.genres.slice(0, 3).map((genre, index) => (
+                  <span key={genre.id}>
+                    {genre.name}
+                    {index < Math.min(movie.genres.length, 3) - 1 && ' • '}
+                  </span>
+                ))}
+              </motion.div>
+            )}
+            
+            <motion.div 
+              className="netflix-hero-buttons"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.5 }}
+            >
+              <button 
+                className="netflix-btn netflix-btn-play"
+                onClick={handlePlayClick}
+              >
+                <Play size={20} fill="currentColor" />
+                Play
+              </button>
+              <button 
+                className="netflix-btn netflix-btn-info"
+                onClick={() => setShowMoreInfo(true)}
+              >
+                <Plus size={20} />
+                My List
+              </button>
+              <button 
+                className="netflix-icon-btn"
+                onClick={() => handleRating('up')}
+                title="I like this"
+              >
+                <ThumbsUp size={20} fill={userRating === 'up' ? 'currentColor' : 'none'} />
+              </button>
+              <button 
+                className="netflix-icon-btn"
+                onClick={() => handleRating('down')}
+                title="Not for me"
+              >
+                <ThumbsDown size={20} fill={userRating === 'down' ? 'currentColor' : 'none'} />
+              </button>
+              <button 
+                className="netflix-icon-btn"
+                onClick={handleShare}
+                title="Share"
+              >
+                <Share2 size={20} />
+              </button>
+            </motion.div>
+          </div>
+
+          <div className="netflix-hero-controls">
+            <button 
+              className="netflix-volume-btn"
+              onClick={() => setIsMuted(!isMuted)}
+            >
+              {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
+            </button>
+            
+            <div className="netflix-maturity-rating">
+              18+
+            </div>
+          </div>
         </div>
-      </section>
+      </div>
+
+      {/* Movie Info Section */}
+      <div className="netflix-movie-info">
+        <div className="netflix-info-container">
+          <div className="netflix-info-main">
+            <div className="netflix-info-left">
+              <div className="netflix-cast-info">
+                <p><span>Cast:</span> {cast.slice(0, 4).map(actor => actor.name).join(', ')}</p>
+                <p><span>Genres:</span> {movie.genres?.map(g => g.name).join(', ')}</p>
+                <p><span>Director:</span> {getDirector()}</p>
+              </div>
+            </div>
+            
+            <div className="netflix-info-right">
+              <div className="netflix-episodes-info">
+                <h3>About {movie.title}</h3>
+                <p><span>Director:</span> {getDirector()}</p>
+                <p><span>Cast:</span> {cast.slice(0, 6).map(actor => actor.name).join(', ')}</p>
+                <p><span>Genres:</span> {movie.genres?.map(g => g.name).join(', ')}</p>
+                <p><span>This movie is:</span> {movie.genres?.slice(0, 2).map(g => g.name).join(', ')}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Download Section */}
+      <div className="netflix-download-section">
+        <div className="netflix-info-container">
+          <h2>Download Options</h2>
+          <div className="netflix-download-grid">
+            {[
+              { quality: 'SD', size: '1.2 GB' },
+              { quality: 'HD', size: '2.8 GB' },
+              { quality: 'Full HD', size: '4.5 GB' },
+              { quality: '4K', size: '8.2 GB' }
+            ].map((item, index) => (
+              <div key={index} className="netflix-download-card">
+                <div className="download-info">
+                  <h4>{item.quality} Quality</h4>
+                  <p>{item.size}</p>
+                </div>
+                <button
+                  className="netflix-download-btn"
+                  onClick={() => handleDownload(item.quality)}
+                >
+                  <Download size={16} />
+                  Download
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* Similar Movies */}
       {similarMovies.length > 0 && (
-        <ContentGrid
+        <NetflixRow
           title="More Like This"
           content={similarMovies}
-          loading={false}
+          onPlayClick={handlePlayClick}
         />
       )}
 
       {/* Recommendations */}
       {recommendations.length > 0 && (
-        <ContentGrid
-          title="Recommended for You"
+        <NetflixRow
+          title="Because you watched this"
           content={recommendations}
-          loading={false}
+          onPlayClick={handlePlayClick}
         />
       )}
 
-      {/* Video Modal */}
-      <VideoModal
-        isOpen={showTrailer}
-        onClose={() => setShowTrailer(false)}
-        videoKey={getTrailerKey()}
-      />
+      {/* Trailer Modal */}
+      <AnimatePresence>
+        {showTrailer && (
+          <motion.div
+            className="netflix-modal-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowTrailer(false)}
+          >
+            <motion.div
+              className="netflix-modal-content"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button 
+                className="netflix-modal-close"
+                onClick={() => setShowTrailer(false)}
+              >
+                <X size={24} />
+              </button>
+              <div className="netflix-video-container">
+                <iframe
+                  width="100%"
+                  height="400"
+                  src={`https://www.youtube.com/embed/${getTrailerKey()}?autoplay=1`}
+                  title="Movie Trailer"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                ></iframe>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
