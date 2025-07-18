@@ -184,15 +184,39 @@ class TMDBApiService {
     return this.request('/movie/now_playing', { page });
   }
 
+  async getLatestMovies(page = 1) {
+    return this.request('/movie/latest', { page });
+  }
+
+  async getAiringToday(page = 1) {
+    return this.request('/tv/airing_today', { page });
+  }
+
+  async getOnTheAir(page = 1) {
+    return this.request('/tv/on_the_air', { page });
+  }
+
   async getMovieDetails(id) {
     return this.request(`/movie/${id}`, {
-      append_to_response: 'credits,videos,similar,recommendations,translations,reviews'
+      append_to_response: 'credits,videos,similar,recommendations,translations,reviews,images,keywords,external_ids'
     });
   }
 
   async getTVDetails(id) {
     return this.request(`/tv/${id}`, {
-      append_to_response: 'credits,videos,similar,recommendations,translations,reviews'
+      append_to_response: 'credits,videos,similar,recommendations,translations,reviews,images,keywords,external_ids,season/1'
+    });
+  }
+
+  async getSeasonDetails(tvId, seasonNumber) {
+    return this.request(`/tv/${tvId}/season/${seasonNumber}`, {
+      append_to_response: 'credits,videos,images'
+    });
+  }
+
+  async getEpisodeDetails(tvId, seasonNumber, episodeNumber) {
+    return this.request(`/tv/${tvId}/season/${seasonNumber}/episode/${episodeNumber}`, {
+      append_to_response: 'credits,videos,images'
     });
   }
 
@@ -202,6 +226,22 @@ class TMDBApiService {
 
   async searchMulti(query, page = 1) {
     return this.request('/search/multi', { query, page });
+  }
+
+  async searchTV(query, page = 1) {
+    return this.request('/search/tv', { query, page });
+  }
+
+  async searchPerson(query, page = 1) {
+    return this.request('/search/person', { query, page });
+  }
+
+  async searchCompany(query, page = 1) {
+    return this.request('/search/company', { query, page });
+  }
+
+  async searchKeyword(query, page = 1) {
+    return this.request('/search/keyword', { query, page });
   }
 
   async getGenres(mediaType = 'movie') {
@@ -216,14 +256,97 @@ class TMDBApiService {
     });
   }
 
+  async getTVByGenre(genreId, page = 1, sortBy = 'popularity.desc') {
+    return this.request('/discover/tv', {
+      with_genres: genreId,
+      page,
+      sort_by: sortBy
+    });
+  }
+
   async getPersonDetails(id) {
     return this.request(`/person/${id}`, {
-      append_to_response: 'movie_credits,tv_credits,images'
+      append_to_response: 'movie_credits,tv_credits,images,external_ids,combined_credits'
     });
+  }
+
+  async getPersonMovieCredits(id) {
+    return this.request(`/person/${id}/movie_credits`);
+  }
+
+  async getPersonTVCredits(id) {
+    return this.request(`/person/${id}/tv_credits`);
+  }
+
+  async getPersonCombinedCredits(id) {
+    return this.request(`/person/${id}/combined_credits`);
   }
 
   async getConfiguration() {
     return this.request('/configuration');
+  }
+
+  async getCountries() {
+    return this.request('/configuration/countries');
+  }
+
+  async getLanguages() {
+    return this.request('/configuration/languages');
+  }
+
+  async getTimezones() {
+    return this.request('/configuration/timezones');
+  }
+
+  // Collections
+  async getCollection(id) {
+    return this.request(`/collection/${id}`, {
+      append_to_response: 'images'
+    });
+  }
+
+  // Networks
+  async getNetwork(id) {
+    return this.request(`/network/${id}`);
+  }
+
+  // Companies
+  async getCompany(id) {
+    return this.request(`/company/${id}`);
+  }
+
+  // Keywords
+  async getKeyword(id) {
+    return this.request(`/keyword/${id}`);
+  }
+
+  async getMoviesByKeyword(keywordId, page = 1) {
+    return this.request('/discover/movie', {
+      with_keywords: keywordId,
+      page
+    });
+  }
+
+  // Reviews
+  async getMovieReviews(id, page = 1) {
+    return this.request(`/movie/${id}/reviews`, { page });
+  }
+
+  async getTVReviews(id, page = 1) {
+    return this.request(`/tv/${id}/reviews`, { page });
+  }
+
+  // External IDs
+  async getMovieExternalIds(id) {
+    return this.request(`/movie/${id}/external_ids`);
+  }
+
+  async getTVExternalIds(id) {
+    return this.request(`/tv/${id}/external_ids`);
+  }
+
+  async getPersonExternalIds(id) {
+    return this.request(`/person/${id}/external_ids`);
   }
 
   // Advanced search with filters
@@ -252,6 +375,55 @@ class TMDBApiService {
     };
 
     return this.request('/discover/movie', params);
+  }
+
+  // Advanced TV search
+  async advancedTVSearch(filters = {}) {
+    const {
+      query,
+      first_air_date_year,
+      genre,
+      rating_gte,
+      rating_lte,
+      sort_by = 'popularity.desc',
+      page = 1
+    } = filters;
+
+    if (query) {
+      return this.searchTV(query, page);
+    }
+
+    const params = {
+      page,
+      sort_by,
+      ...(first_air_date_year && { first_air_date_year }),
+      ...(genre && { with_genres: genre }),
+      ...(rating_gte && { 'vote_average.gte': rating_gte }),
+      ...(rating_lte && { 'vote_average.lte': rating_lte })
+    };
+
+    return this.request('/discover/tv', params);
+  }
+
+  // Watchlist and favorites (would integrate with backend)
+  async addToWatchlist(mediaType, mediaId) {
+    // This would integrate with your backend/authentication system
+    console.log(`Adding ${mediaType} ${mediaId} to watchlist`);
+  }
+
+  async removeFromWatchlist(mediaType, mediaId) {
+    // This would integrate with your backend/authentication system
+    console.log(`Removing ${mediaType} ${mediaId} from watchlist`);
+  }
+
+  async addToFavorites(mediaType, mediaId) {
+    // This would integrate with your backend/authentication system
+    console.log(`Adding ${mediaType} ${mediaId} to favorites`);
+  }
+
+  async removeFromFavorites(mediaType, mediaId) {
+    // This would integrate with your backend/authentication system
+    console.log(`Removing ${mediaType} ${mediaId} from favorites`);
   }
 }
 

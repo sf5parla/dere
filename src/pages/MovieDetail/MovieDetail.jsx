@@ -48,10 +48,11 @@ const MovieDetail = () => {
   ];
 
   const downloadQualities = [
-    { quality: 'SD', size: '1.2 GB' },
-    { quality: 'HD', size: '2.8 GB' },
-    { quality: 'Full HD', size: '4.5 GB' },
-    { quality: '4K', size: '8.2 GB' }
+    { quality: 'SD', size: '1.2 GB', resolution: '480p' },
+    { quality: 'HD', size: '2.8 GB', resolution: '720p' },
+    { quality: 'Full HD', size: '4.5 GB', resolution: '1080p' },
+    { quality: '4K', size: '8.2 GB', resolution: '2160p' },
+    { quality: '8K', size: '15.6 GB', resolution: '4320p' }
   ];
 
   useEffect(() => {
@@ -68,12 +69,14 @@ const MovieDetail = () => {
       const data = await tmdbApi.getMovieDetails(id);
       
       setMovie(data);
-      setCast(data.credits?.cast?.slice(0, 10) || []);
-      setCrew(data.credits?.crew?.slice(0, 5) || []);
+      setCast(data.credits?.cast?.slice(0, 20) || []);
+      setCrew(data.credits?.crew?.filter(person => 
+        ['Director', 'Producer', 'Executive Producer', 'Screenplay', 'Writer'].includes(person.job)
+      ).slice(0, 10) || []);
       setVideos(data.videos?.results || []);
-      setReviews(data.reviews?.results?.slice(0, 3) || []);
-      setSimilarMovies(data.similar?.results?.slice(0, 12) || []);
-      setRecommendations(data.recommendations?.results?.slice(0, 12) || []);
+      setReviews(data.reviews?.results?.slice(0, 5) || []);
+      setSimilarMovies(data.similar?.results?.slice(0, 20) || []);
+      setRecommendations(data.recommendations?.results?.slice(0, 20) || []);
       setTranslations(data.translations?.translations || []);
       
     } catch (error) {

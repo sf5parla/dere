@@ -18,30 +18,14 @@ import './App.css';
 
 function App() {
   const [theme, setTheme] = useState('dark');
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Initialize app
-    const initializeApp = async () => {
-      try {
-        // Load user preferences
-        const savedTheme = localStorage.getItem('streamflix-theme') || 'dark';
-        setTheme(savedTheme);
-        
-        // Apply theme to document
-        document.documentElement.setAttribute('data-theme', savedTheme);
-        
-        // Simulate app initialization
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-      } catch (error) {
-        console.error('Error initializing app:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    initializeApp();
+    // Load user preferences
+    const savedTheme = localStorage.getItem('streamflix-theme') || 'dark';
+    setTheme(savedTheme);
+    
+    // Apply theme to document
+    document.documentElement.setAttribute('data-theme', savedTheme);
   }, []);
 
   const toggleTheme = () => {
@@ -50,21 +34,6 @@ function App() {
     localStorage.setItem('streamflix-theme', newTheme);
     document.documentElement.setAttribute('data-theme', newTheme);
   };
-
-  if (isLoading) {
-    return (
-      <div className="app-loading">
-        <div className="loading-content">
-          <div className="loading-logo">
-            <span className="logo-icon">🎬</span>
-            <span className="logo-text">StreamFlix</span>
-          </div>
-          <div className="loading-spinner" />
-          <p className="loading-text">Loading Your Entertainment...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <ErrorBoundary>
