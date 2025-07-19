@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { HelmetProvider } from 'react-helmet-async';
 import Header from './components/Header/Header';
 import Home from './pages/Home';
 import Trending from './pages/Trending/Trending';
@@ -14,6 +15,8 @@ import AdvancedSearch from './pages/AdvancedSearch/AdvancedSearch';
 import People from './pages/People/People';
 import PersonDetail from './pages/PersonDetail/PersonDetail';
 import ErrorBoundary from './components/ErrorBoundary/ErrorBoundary';
+import { initializeCriticalImages } from './utils/criticalImageCSS';
+import { imageOptimizer } from './utils/imageOptimization';
 import './App.css';
 
 function App() {
@@ -26,6 +29,10 @@ function App() {
     
     // Apply theme to document
     document.documentElement.setAttribute('data-theme', savedTheme);
+    
+    // Initialize image optimizations
+    initializeCriticalImages();
+    imageOptimizer.lazyLoadImages();
   }, []);
 
   const toggleTheme = () => {
@@ -37,58 +44,60 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <Router>
-        <div className={`App theme-${theme}`}>
-          <Header />
-          
-          <AnimatePresence mode="wait">
-            <motion.main
-              key={window.location.pathname}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/trending" element={<Trending />} />
-                <Route path="/top-rated" element={<TopRated />} />
-                <Route path="/upcoming" element={<Upcoming />} />
-                <Route path="/search" element={<SearchResults />} />
-                <Route path="/advanced-search" element={<AdvancedSearch />} />
-                <Route path="/movie/:id" element={<MovieDetail />} />
-                <Route path="/tv/:id" element={<MovieDetail />} />
-                <Route path="/watch/:id" element={<WatchMovie />} />
-                <Route path="/genre/:id" element={<GenrePage />} />
-                <Route path="/people" element={<People />} />
-                <Route path="/person/:id" element={<PersonDetail />} />
-                <Route path="*" element={
-                  <div className="not-found">
-                    <div className="not-found-content">
-                      <h1>404</h1>
-                      <h2>Page Not Found</h2>
-                      <p>The page you're looking for doesn't exist.</p>
-                      <a href="/" className="btn-primary">Go Home</a>
+      <HelmetProvider>
+        <Router>
+          <div className={`App theme-${theme}`}>
+            <Header />
+            
+            <AnimatePresence mode="wait">
+              <motion.main
+                key={window.location.pathname}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/trending" element={<Trending />} />
+                  <Route path="/top-rated" element={<TopRated />} />
+                  <Route path="/upcoming" element={<Upcoming />} />
+                  <Route path="/search" element={<SearchResults />} />
+                  <Route path="/advanced-search" element={<AdvancedSearch />} />
+                  <Route path="/movie/:id" element={<MovieDetail />} />
+                  <Route path="/tv/:id" element={<MovieDetail />} />
+                  <Route path="/watch/:id" element={<WatchMovie />} />
+                  <Route path="/genre/:id" element={<GenrePage />} />
+                  <Route path="/people" element={<People />} />
+                  <Route path="/person/:id" element={<PersonDetail />} />
+                  <Route path="*" element={
+                    <div className="not-found">
+                      <div className="not-found-content">
+                        <h1>404</h1>
+                        <h2>Page Not Found</h2>
+                        <p>The page you're looking for doesn't exist.</p>
+                        <a href="/" className="btn-primary">Go Home</a>
+                      </div>
                     </div>
-                  </div>
-                } />
-              </Routes>
-            </motion.main>
-          </AnimatePresence>
+                  } />
+                </Routes>
+              </motion.main>
+            </AnimatePresence>
 
-          {/* Theme Toggle Button */}
-          <button
-            className="theme-toggle"
-            onClick={toggleTheme}
-            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
-          >
-            {theme === 'dark' ? '☀️' : '🌙'}
-          </button>
+            {/* Theme Toggle Button */}
+            <button
+              className="theme-toggle"
+              onClick={toggleTheme}
+              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+            >
+              {theme === 'dark' ? '☀️' : '🌙'}
+            </button>
 
-          {/* Scroll to Top Button */}
-          <ScrollToTop />
-        </div>
-      </Router>
+            {/* Scroll to Top Button */}
+            <ScrollToTop />
+          </div>
+        </Router>
+      </HelmetProvider>
     </ErrorBoundary>
   );
 }
